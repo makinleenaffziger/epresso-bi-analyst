@@ -1,5 +1,5 @@
 import pandas as pd
-from agent import dispatch_tool
+from agent import dispatch_tool, answer_question
 
 data = pd.DataFrame({
     "Date": ["2025-01-31", "2025-02-28", "2026-01-31"],
@@ -8,82 +8,100 @@ data = pd.DataFrame({
     "Category": ["Beans", "Beans", "Syrups"],
     "Store ID": ["SH00", "SH01", "SH00"]
 })
-
 original = data.copy(deep=True)
 
-# Run an approved tool and check its log.
-log = dispatch_tool(
-    data,
-    "get_revenue_by_channel",
-    {"year": 2025}
-)
-
+# Approved dispatch and complete log.
+log = dispatch_tool(data, "get_revenue_by_channel", {"year": 2025})
 assert log["function"] == "get_revenue_by_channel"
 assert log["arguments"] == {
-    "year": 2025,
-    "channel": None,
-    "category": None,
-    "store": None
+    "year": 2025, "channel": None, "category": None, "store": None
 }
 assert log["result"]["value"] == {
-    "Brick & Mortar": 200.0,
-    "Website": 100.0
+    "Brick & Mortar": 200.0, "Website": 100.0
 }
-print("PASS: Approved calculation and call log work.")
 
-# Confirm the other two tools can also run.
-log = dispatch_tool(data, "get_revenue_by_year")
-assert log["result"]["value"] == {"2025": 300.0, "2026": 50.0}
+assert dispatch_tool(
+    data, "get_revenue_by_year"
+)["result"]["value"] == {"2025": 300.0, "2026": 50.0}
 
-log = dispatch_tool(data, "get_monthly_revenue_share")
-assert log["result"]["value"]["total_dated_revenue"] == 350.0
-print("PASS: All three approved tools are available.")
+assert dispatch_tool(
+    data, "get_monthly_revenue_share"
+)["result"]["value"]["total_dated_revenue"] == 350.0
 
-# Reject a tool that is not approved.
-log = dispatch_tool(data, "delete_sales")
-assert "error" in log["result"]
-print("PASS: Unsupported tools are rejected.")
+print("PASS: All approved tools and logs work.")
 
-# Reject filters the tools do not accept.
-log = dispatch_tool(
+# Rejected requests.
+for name, arguments in [
+    ("delete_sales", {}),
+    ("get_revenue_by_channel", {"profit": True}),
+    ("get_revenue_by_channel", {"year": "2025"}),
+    ("get_revenue_by_channel", ["2025"]),
+    ("get_revenue_by_channel", {"store": "SH99"})
+]:
+    assert "error" in dispatch_tool(data, name, arguments)["result"]
+
+print("PASS: Unsupported tools and invalid arguments are rejected.")
+
+# Each supported question calls the intended tool.
+questions = {
+    "Compare revenue by store type": "get_revenue_by_channel",
+    "Which store type has the most revenue?": "get_revenue_by_channel",
+    "Show revenue by year": "get_revenue_by_year",
+    "Show monthly revenue shares": "get_monthly_revenue_share"
+}
+
+for question, expected_tool in questions.items():
+    answer = answer_question(data, question)
+    assert answer["tool_log"]["function"] == expected_tool
+    assert "error" not in answer["tool_log"]["result"]
+    assert answer["scope"].startswith("Scope:")
+    assert answer["findings"]
+    assert answer["interpretation"]
+    assert answer["next_steps"]
+
+print("PASS: Supported questions call the correct tools.")
+
+# Dashboard filters must reach the tool explicitly.
+answer = answer_question(
     data,
-    "get_revenue_by_channel",
-    {"profit": True}
+    "Compare revenue by store type",
+    year=2025,
+    channel="Website",
+    category="Beans",
+    store="SH00"
 )
-assert "error" in log["result"]
-print("PASS: Unsupported filters are rejected.")
+assert answer["tool_log"]["result"]["value"] == {"Website": 100.0}
+assert answer["tool_log"]["arguments"]["store"] == "SH00"
+print("PASS: Answers use the explicit filters.")
 
-# Reject an incorrectly formatted year.
-log = dispatch_tool(
-    data,
-    "get_revenue_by_channel",
-    {"year": "2025"}
-)
-assert "error" in log["result"]
-print("PASS: Incorrect argument types are rejected.")
+# Unsupported questions must not invent an answer.
+answer = answer_question(data, "What will sales be next year?")
+assert answer["tool_log"] is None
+assert "not supported" in answer["findings"]
+print("PASS: Unsupported questions are identified.")
 
-# Reject incorrectly structured arguments.
-log = dispatch_tool(data, "get_revenue_by_channel", ["2025"])
-assert "error" in log["result"]
-print("PASS: Arguments must be named filters.")
+# Profit questions must explain the missing evidence.
+answer = answer_question(data, "Does revenue tell us profit?")
+assert "does not establish profit" in answer["interpretation"]
+assert "cost" in answer["next_steps"].lower()
+print("PASS: Revenue is not presented as profit.")
 
-# Let the analytical tool explain an unknown store.
-log = dispatch_tool(
-    data,
-    "get_revenue_by_channel",
-    {"store": "SH99"}
-)
-assert "error" in log["result"]
-print("PASS: Unknown stores return an explanation.")
+# Missing data must be explained.
+missing = data.copy()
+missing.loc[0, "Revenue"] = None
+answer = answer_question(missing, "Compare revenue by store type")
+assert "error" in answer["tool_log"]["result"]
+assert "insufficient" in answer["interpretation"]
+print("PASS: Missing revenue is explained.")
 
-# Check that replacing the data changes the logged answer.
+# The same question must respond to changed data.
 changed = data.copy()
 changed.loc[0, "Revenue"] += 1000
-log = dispatch_tool(changed, "get_revenue_by_channel")
-assert log["result"]["value"]["Website"] == 1150.0
-print("PASS: The dispatcher uses the supplied data.")
+answer = answer_question(changed, "Compare revenue by store type")
+assert answer["tool_log"]["result"]["value"]["Website"] == 1150.0
+print("PASS: Answers change when the supplied data changes.")
 
 pd.testing.assert_frame_equal(data, original)
 print("PASS: Original data remains unchanged.")
 
-print("All dispatcher tests passed.")
+print("All dispatcher and question tests passed.")

@@ -277,3 +277,12 @@ else:
         hovertemplate="%{x}<br>Revenue share: %{y:.2%}<extra></extra>"
     )
     st.plotly_chart(monthly_chart, use_container_width=True)
+
+from assistant_ui import show_assistant
+
+show_assistant(
+    combined,
+    year=None if selected_year == "All years" else int(selected_year),
+    channel=None if selected_channel == "All store types" else selected_channel,
+    category=None if selected_category == "All categories" else selected_category
+)
