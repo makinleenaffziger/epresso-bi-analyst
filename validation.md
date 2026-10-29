@@ -1,28 +1,85 @@
 # E-Presso Validation Notes
 
-## Total revenue comparison
+Validation performed October 28–29, 2026.
+
+## Power BI and Streamlit comparisons
+
+Both applications used the original E-Presso data.
+All years, stores, and categories were included unless stated otherwise.
 
 | Measure | Power BI | Streamlit | Result |
 |---|---:|---:|---|
 | Total revenue, 2025–2029 | $42,174,440.00 | $42,174,440.00 | Exact match |
-| Website revenue, all years | $27,218,880.00 | $27,218,880.00 | Exact match |
+| Website revenue | $27,218,880.00 | $27,218,880.00 | Exact match |
+| Brick & Mortar revenue | $14,955,560.00 | $14,955,560.00 | Exact match |
+| 2025 revenue | $7,181,750.00 | $7,181,750.00 | Exact match |
+| 2026 revenue | $8,016,950.00 | $8,016,950.00 | Exact match |
+| 2027 revenue | $8,824,720.00 | $8,824,720.00 | Exact match |
+| 2028 revenue | $8,969,470.00 | $8,969,470.00 | Exact match |
+| 2029 revenue | $9,181,550.00 | $9,181,550.00 | Exact match |
+| Additional measure: Website Beans revenue, all years | $3,645,210.00 | $3,645,210.00 | Exact match |
 
-Streamlit brick-and-mortar revenue is $14,955,560.00.
-An exact Power BI comparison for this combined amount is still needed.
+Exact Power BI values were checked using table totals and chart tooltips.
+No numerical discrepancies were found in these comparisons.
 
-Exact annual comparisons, the complete monthly comparison, and an
-additional business measure still need to be documented.
+## Monthly revenue patterns
+
+Scope: all years, store types, and categories.
+
+Streamlit calculates each calendar month's revenue across all five years
+divided by total revenue across those years. This is a combined revenue
+share, not an average of annual percentages.
+
+| Month | Power BI | Streamlit | Result |
+|---|---:|---:|---|
+| January | 7.74% | 7.74% | Match |
+| February | 3.83% | 3.83% | Match |
+| March | 4.44% | 4.44% | Match |
+| April | 5.15% | 5.15% | Match |
+| May | 5.72% | 5.72% | Match |
+| June | 6.50% | 6.50% | Match |
+| July | 6.42% | 6.42% | Match |
+| August | 6.45% | 6.45% | Match |
+| September | 7.11% | 7.11% | Match |
+| October | 8.31% | 8.31% | Match |
+| November | 12.71% | 12.71% | Match |
+| December | 25.61% | 25.61% | Match |
+
+All monthly percentages agree to the two decimal places displayed.
+The Power BI visual is titled “Percent of Annual Revenue per Month,”
+but this comparison used its all-years view. Agreement in that view
+does not verify the calculation under every possible filter.
 
 ## Independent calculation check
 
-A separate Python calculation read the exported Sales.csv directly,
-without joining other tables, and summed its Revenue column.
+A separate Python calculation read Sales.csv directly, without joining
+other tables, and summed its Revenue column.
 
 Result: $42,174,440.00, matching Streamlit and Power BI.
 
-Reproduce the check from the project folder with:
+To reproduce, run this command from the project folder:
 
 python3 -c 'import pandas as pd; print(pd.read_csv("Sales.csv")["Revenue"].sum())'
+
+The Sales file contains 25,200 rows: 21 store/channel records ×
+20 products × 60 months. No store–product–month combination repeats.
+
+## Data quality
+
+| Table | Rows | Duplicate IDs | Missing values |
+|---|---:|---:|---|
+| Stores | 21 | 0 | City, State, and PostalCode each have 1 blank |
+| Survey Results | 105 | 0 | Satisfaction and Interest each have 5 blanks |
+| Sales | 25,200 | 0 | None |
+| Products | 20 | 0 | None |
+| Categories | 5 | 0 | None |
+
+The blank location fields belong to the Website record, SH00.
+Missing survey responses remain blank; they are not treated as zero.
+The original Sales file has no missing or unreadable dates.
+
+Three products share the name Base Model. Product ID, rather than
+product name, identifies each product.
 
 ## Table connection checks
 
@@ -39,9 +96,21 @@ Each connection uses a left join with a many-to-one check.
 | Categories | 25,200 | 25,200 | $42,174,440.00 | $42,174,440.00 | 0 |
 
 No sales rows were added or removed, and revenue did not change.
+Survey Results has not been joined to Sales.
 
-Product names are not unique: three products are called Base Model.
-Product ID is used to identify products.
+## Filter checks using original data
+
+| Year | Store type | Category | Expected revenue | Actual revenue |
+|---|---|---|---:|---:|
+| 2025 | All | All | $7,181,750.00 | $7,181,750.00 |
+| All | Website | All | $27,218,880.00 | $27,218,880.00 |
+| 2025 | Website | All | $3,160,230.00 | $3,160,230.00 |
+| All | All | Beans | $5,672,720.00 | $5,672,720.00 |
+| All | All | Espresso Machines | $27,093,220.00 | $27,093,220.00 |
+| All | Website | Beans | $3,645,210.00 | $3,645,210.00 |
+
+The year, store type, and category filters were also checked in the
+hosted application.
 
 ## $1,000 modified-data test
 
@@ -87,7 +156,16 @@ updated-data test remains outstanding.
 
 ## Evidence to retain
 
-- Power BI exact revenue screenshot.
-- Table connection check screenshot.
-- Screenshots of the modified total, filtered result, annual chart,
-  unaffected year, and restored total where available.
+- Power BI revenue totals and tooltip screenshots.
+- Streamlit table connection checks.
+- Monthly comparison screenshots.
+- Modified-data test screenshots where available.
+- Assistant tool-call logs and test evidence once implemented.
+
+## Analytical limitations
+
+Revenue is not profit. Cost and expense data would be needed to
+evaluate profitability or justify closing a store.
+
+A relationship between satisfaction and revenue would not establish
+causation. Missing survey responses also limit interpretation.
