@@ -108,3 +108,56 @@ if categories_file is not None:
 
     st.subheader("Missing category values by column")
     st.dataframe(categories.isna().sum().rename("Missing values"))
+
+st.subheader("Connect Sales to Stores")
+
+if stores_file is not None and sales_file is not None:
+    if stores["ID"].isna().any() or stores["ID"].duplicated().any():
+        st.error("Stores must have a unique, nonblank ID for every row.")
+    else:
+        combined = sales.merge(
+            stores,
+            left_on="Store ID",
+            right_on="ID",
+            how="left",
+            validate="many_to_one",
+            indicator=True
+        )
+
+        merge_check = pd.DataFrame({
+            "Check": ["Sales rows", "Total revenue"],
+            "Before connection": [
+                f"{len(sales):,}",
+                f"${sales['Revenue'].sum():,.2f}"
+            ],
+            "After connection": [
+                f"{len(combined):,}",
+                f"${combined['Revenue'].sum():,.2f}"
+            ]
+        })
+
+        st.dataframe(merge_check, hide_index=True)
+
+        unmatched = (combined["_merge"] == "left_only").sum()
+        st.write("Sales records without a matching store:", unmatched)
+
+        if unmatched > 0:
+            st.warning("Some sales have no matching store. Check the store IDs.")
+
+        st.subheader("Revenue by store type")
+        channel_revenue = (
+            combined.assign(
+                StoreType=combined["StoreType"].fillna("Unknown store type")
+            )
+            .groupby("StoreType")["Revenue"]
+            .sum()
+            .rename("Revenue")
+            .reset_index()
+        )
+
+        st.dataframe(
+            channel_revenue.style.format({"Revenue": "${:,.2f}"}),
+            hide_index=True
+        )
+else:
+    st.info("Upload both Stores and Sales to connect them.")
