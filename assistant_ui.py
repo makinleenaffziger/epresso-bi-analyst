@@ -5,13 +5,15 @@ import streamlit as st
 
 from agent import answer_question
 
+# Import Gemini lazily so the rules-based assistant still works without its SDK.
+
 
 def show_assistant(data, year=None, channel=None, category=None):
     """Display the rules-based assistant and its calculation logs."""
 
     st.subheader("E-Presso analytical assistant")
     st.caption(
-        "Rules-based assistant: uses the supported questions below. "
+        "Ask about revenue by store type, year, or month. "
         "Answers use your currently uploaded data and dashboard filters."
     )
 
@@ -50,6 +52,8 @@ def show_assistant(data, year=None, channel=None, category=None):
         st.session_state.assistant_history = []
         st.session_state.assistant_context = context
 
+    use_gemini = st.checkbox("Use Gemini", value=False)
+
     count = st.session_state.assistant_count
     st.caption(f"Questions used this session: {count} of 15")
 
@@ -69,13 +73,20 @@ def show_assistant(data, year=None, channel=None, category=None):
         st.session_state.assistant_count += 1
 
         try:
-            response = answer_question(
+            responder = answer_question
+            extra = {}
+            if use_gemini:
+                from gemini_agent import answer_with_gemini
+                responder = answer_with_gemini
+                extra = {"api_key": st.secrets["GEMINI_API_KEY"]}
+            response = responder(
                 data,
                 question,
                 year=year,
                 channel=channel,
                 category=category,
-                store=None
+                store=None,
+                **extra
             )
         except Exception:
             response = {
@@ -101,6 +112,7 @@ def show_assistant(data, year=None, channel=None, category=None):
         response = entry["response"]
 
         with st.chat_message("assistant"):
+            st.caption(response.get("mode", "Rules-based"))
             st.write(response["scope"])
 
             st.markdown("**Findings**")

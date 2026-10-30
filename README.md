@@ -1,195 +1,116 @@
-# E-Presso Business Intelligence App
+E-Presso Business Intelligence App
+An interactive Streamlit dashboard for exploring fictional E-Presso revenue, checking data quality, and asking analytical questions.
+Open the hosted app
+Open E-Presso
 
-An interactive Streamlit application for exploring E-Presso revenue
-and checking the quality of its source data.
+The hosted dashboard has been tested without a login. Allow it time to wake if sleeping. The latest local Gemini and causation-response changes still require upload and verification on the hosted app.
+Features
+- Upload Stores, Survey Results, Sales, Products, and Categories.
+- Display table grains, row counts, duplicate IDs, and missing values.
+- Verify Sales-to-lookup joins with row counts, revenue, and unmatched records.
+- Filter revenue by year, store type, and category.
+- Explore revenue by store type, year, and calendar month.
+- Use Gemini to select approved analytical tools and explain their results.
+- Display exact Python findings, scope, and tool-call logs.
+- Fall back to labeled rules-based answers when Gemini fails.
+- Limit assistant use to 15 questions per session.
+Data uploads
+Upload	Source	Reading method
+Stores	Supplied Stores CSV	Skip first title line; preserve text fields
+Survey	Supplied Survey workbook	Survey Results sheet; skip first two lines
+Sales	Sales.csv	First row contains column names
+Products	Products.csv	First row contains column names
+Categories	Categories.csv	First row contains column names
 
-## Open the app
 
-https://makinleenaffziger-epresso-bi-analyst-streamlit-app-5ax0cw.streamlit.app/
+Sales, Products, and Categories were exported from Access as comma-delimited files with field names. Stores, Sales, Products, and Categories are required for the dashboard. Survey is profiled separately.
 
-The app opens without a login. If it is sleeping, allow it time to start.
+Uploads are session data and do not overwrite source files. A fresh browser session may require uploading again. Updated files must retain the expected sheets, columns, and types; values and rows may change. Filter lists come from loaded data.
+Table grains and joins
+Table	One row represents	Key
+Stores	One store or website channel	ID
+Survey Results	One store's survey results in one year	Survey ID
+Sales	One product's revenue at one store/channel for one month	Sales ID
+Products	One product	Product ID
+Categories	One product category	Category ID
 
-## Current features
 
-- Uploads for Stores, Survey Results, Sales, Products, and Categories.
-- Descriptions of what one row represents in each table.
-- Row counts, duplicate-ID checks, and missing-value reports.
-- Verified connections between Sales and its lookup tables.
-- Revenue by store type, year, and calendar month.
-- Year, store-type, and category filters.
-- A rules-based analytical assistant with visible tool-call logs.
-- A 15-question limit per assistant session.
+Sales left-joins Stores through Store ID → ID, Products through Product ID, and Categories through Category ID. Lookup keys must be unique and nonblank. Join checks report rows, revenue, and unmatched sales. Product names are not unique.
 
-## Upload the data
+Survey is not joined to Sales. Joining only on Store ID could duplicate sales across survey years.
+Calculation definitions
+Revenue is the sum of loaded Sales.Revenue within explicit filters. Profiles and join checks describe full uploads; the revenue metric, charts, tables, and assistant calculations use the selected scope.
 
-Use the upload boxes in the application.
+Yearly revenue groups readable dates by calendar year. Monthly share is a calendar month's selected revenue divided by total selected dated revenue. Multiple years are combined, not averaged as yearly percentages.
 
-| Upload | File | Reading method |
-|---|---|---|
-| Stores | Support_EX_B_Stores 2.csv | Skip the first title line; preserve text fields |
-| Survey | Support_EX_B_Survey.xlsx | Survey Results sheet; skip the first two lines |
-| Sales | Sales.csv | Read column headings from the first row |
-| Products | Products.csv | Read column headings from the first row |
-| Categories | Categories.csv | Read column headings from the first row |
+Unreadable dates are reported and excluded from date-based calculations. Missing or unreadable revenue blocks dashboard calculations. Unmatched lookup records remain in left-joined data; missing channel/category labels appear as Unknown.
+Assistant behavior
+Check Use Gemini to enable the live connection. The tested model is gemini-3.1-flash-lite using the Google Gen AI SDK. Uncheck it to use the rules-based question router.
 
-Sales.csv, Products.csv, and Categories.csv were exported from the
-supplied Microsoft Access database as comma-delimited files with field
-names in the first row.
-
-Stores, Sales, Products, and Categories are required for the dashboard.
-The Survey upload is profiled separately and is not joined to Sales.
-
-Uploads belong to the current browser session. They are not saved back
-to the source files. Upload them again when starting a fresh session.
-
-Updated files must retain the expected sheets, column names, and data
-types. Values and rows may change. Filter options come from loaded data.
-
-## Table grain and relationships
-
-| Table | One row represents | Key |
-|---|---|---|
-| Stores | One store or the website sales channel | ID |
-| Survey Results | One store's survey results for one year | Survey ID |
-| Sales | One product's revenue at one store or the website for one month | Sales ID |
-| Products | One product identified by its Product ID | Product ID |
-| Categories | One product category | Category ID |
-
-Sales connects to:
-- Stores through Sales.Store ID → Stores.ID.
-- Products through Product ID.
-- Categories through Category ID.
-
-The application uses left joins and checks that lookup keys are unique
-and nonblank. It displays row counts, revenue totals, and unmatched
-sales around each connection.
-
-Product names are not unique, so Product ID is used for connections.
-
-Survey Results is not joined to Sales. Joining only on Store ID would
-risk repeating sales because each store has multiple survey years.
-
-## Calculation definitions
-
-Revenue is the sum of the currently loaded Sales.Revenue values.
-
-The dashboard filters affect its revenue metric, tables, charts, and
-assistant answers. Data profiles and connection checks describe the
-full uploaded files.
-
-Yearly revenue groups dated sales by calendar year.
-
-Monthly share equals a calendar month's selected revenue divided by
-total selected revenue with readable dates. When multiple years are
-selected, their revenue is combined; yearly percentages are not averaged.
-
-Missing or unreadable dates are reported and excluded from date-based
-charts. Missing or unreadable revenue blocks dashboard calculations
-until the file is corrected.
-
-Unmatched lookup records remain in the left-joined data. Missing category
-and channel labels appear as Unknown labels.
-
-## Analytical assistant
-
-The current implementation is rules-based, not a live language-model
-agent. It recognizes these supported questions:
-
+Example questions:
 - Compare revenue by store type
 - Which store type has the most revenue?
 - Show revenue by year
 - Show monthly revenue shares
 - Does revenue tell us profit?
+- Does higher customer satisfaction cause higher revenue?
+Set filters on the dashboard first. The Gemini route validates tool arguments against the dashboard scope and the dispatcher validates parameter types and loaded values. It does not change filters based on question text. The rules-based route recognizes its supported wording.
 
-Set the dashboard filters before asking. The current router does not
-interpret additional filters or instructions inside a question.
-
-The assistant uses only these approved functions:
+Approved tools:
 - get_revenue_by_channel
 - get_revenue_by_year
 - get_monthly_revenue_share
+Python calculates and formats numerical findings. Each tool returns tool, value, definition, scope, rows_used, and caveats, or an error. Answers show Findings, Interpretation, Next steps, and the function/arguments/raw result log.
 
-Each answer identifies its scope and separates findings, interpretation,
-and next steps. Its visible tool log includes the function, explicit
-arguments, and raw result.
+Gemini explains results but cannot execute arbitrary Python or SQL or modify source data. Output checks reject certain known misleading explanations; they do not guarantee every generated sentence is correct. Review interpretations against tool evidence.
 
-The assistant does not modify the data or execute generated Python
-or SQL. Unsupported questions receive an explanation.
+The supported satisfaction-causation question receives an explicit rules-based limitation response even when Gemini is selected. It explains association versus causation and runs no analytical tool or API request. It does not claim to have analyzed survey-sales relationships.
 
-The question box becomes disabled after 15 questions in a session.
-Changing the uploaded data or filters clears previous answers, while
-retaining the session question count.
+Connection errors, quota errors, or invalid explanations produce labeled fallbacks. Live calls have experienced server errors and timeouts. Each request has a 60-second timeout setting; a successful question normally uses two model requests. Response time is not guaranteed.
 
-A live language-model connection has not yet been implemented.
-API access and availability have not yet been evaluated.
-
-## Validation
-
-The original uploaded data produced $42,174,440.00 in total revenue,
-matching Power BI exactly.
-
-Both channel totals, all five yearly totals, and Website Beans revenue
-matched Power BI exactly. All 12 monthly percentages matched to the
-two decimal places displayed.
-
-A separate calculation summed Sales.csv directly without joins.
-
-The modified-data test increased one revenue value by exactly $1,000.
-The dashboard and assistant updated appropriately without code changes
-or a restart. The original data was restored afterward.
-
-These figures document the original-data tests. They are not hardcoded
-analytical answers in the application.
-
-See validation.md and agent_tests.md for procedures, results, and
-remaining checks.
-
-## Run locally
-
-Install the packages listed in requirements.txt:
-
+Changing uploads or filters clears displayed answers while retaining the session question count. The chat input is disabled after 15 questions. This is a session limit, not an account-wide spending control.
+Run locally
 python3 -m pip install -r requirements.txt
-
-Start the application:
-
 python3 -m streamlit run streamlit_app.py
+Open the Local URL printed in the terminal; the port can vary.
 
-## Run automated tests
+For Gemini, create .streamlit/secrets.toml privately:
+GEMINI_API_KEY = "YOUR_PRIVATE_KEY"
+Add .streamlit/secrets.toml to .gitignore. Never commit or manually upload this file. For hosting, enter the key in Streamlit Community Cloud's Secrets settings. Use only fictional or instructor-approved data with external providers.
 
+Required dependencies:
+streamlit>=1.40
+pandas>=2.0
+plotly>=5.20
+openpyxl>=3.1
+google-genai==2.34.0
+Testing and validation
 python3 test_analytics.py
-
 python3 test_agent.py
+These tests use small made-up datasets with hand-checkable answers. Earlier versions passed; rerun after the latest changes before final submission.
 
-The tests use small made-up datasets with answers that can be checked
-by hand.
+Original total revenue was $42,174,440.00. Channel totals, five yearly totals, Website Beans revenue, and monthly shares matched Power BI. A separate script summed Sales.csv directly without joins.
 
-## Main files
+A $1,000 change in Sales_test.csv updated the dashboard and assistant calculations without code edits or restarting. The original data was restored during development. Numerical screenshots have been collected by the student.
 
-| File | Purpose |
-|---|---|
-| streamlit_app.py | Uploads, profiles, connections, filters, and charts |
-| analytics.py | Three approved analytical functions |
-| agent.py | Approved-tool dispatcher and rules-based question handling |
-| assistant_ui.py | Chat interface, history, session limit, and visible logs |
-| test_analytics.py | Calculation and data-handling tests |
-| test_agent.py | Dispatcher and question-handling tests |
-| validation.md | Power BI comparisons and dashboard modified-data test |
-| agent_tests.md | Assistant testing evidence and remaining checks |
-| requirements.txt | Python packages needed by the hosted app |
+See validation.md and agent_tests.md for exact results, test scope, revisions, and outstanding checks. Recorded expected values are test evidence, not hardcoded application answers.
+Main files
+File	Purpose
+streamlit_app.py	Active entry point: uploads, profiles, joins, filters, charts
+analytics.py	Approved analytical functions
+agent.py	Dispatcher, rules-based answers, causation limitation
+gemini_agent.py	Live tool selection, explanation, validation, fallback
+assistant_ui.py	Chat, history, mode selection, session limit, logs
+test_analytics.py	Calculation/data-handling tests
+test_agent.py	Dispatcher/question-handling tests
+test_connection.py	Manual Gemini connection diagnostic
+validation.md	Reconciliation, data quality, modified-data evidence
+agent_tests.md	Assistant test results and revisions
+requirements.txt	Hosted/local dependencies
 
-streamlit_app.py is the active application entry point.
-The older app.py is not used by the hosted app.
 
-## Limitations
+The older app.py is not the active hosted entry point.
+Limitations and completion status
+Revenue cannot establish profit. The tools do not estimate causation, analyze satisfaction relationships, or forecast performance. Missing survey responses limit interpretation. New sessions may require reuploading files. Model availability varies and generated explanations require review.
 
-- Revenue is not profit; costs and expenses are not supplied.
-- Correlation would not establish causation.
-- Missing survey responses limit satisfaction analysis.
-- The assistant supports a fixed question list.
-- Session uploads must be supplied again in a fresh session.
-- Further updated-data and edge-case checks may be needed for real use.
-
-## Team contributions
-
-The final contribution statement, teammate commits, reflection, and
-individual defense preparation remain to be completed.
+Before final submission: deploy the latest changes, configure hosted Secrets, rerun automated checks, verify the hosted app, complete the controlled profit-fallback retest, and finish the reflection and contribution statement. Every teammate must have meaningful commits and be able to explain calculations and limitations.

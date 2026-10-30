@@ -1,112 +1,104 @@
-# E-Presso Analytical Assistant Tests
+# E-Presso Assistant Testing
 
-Tests performed October 29, 2026.
+The assistant uses the currently uploaded data and explicit dashboard
+filters. Gemini can select from three approved analytical tools.
+Python calculates and formats the numerical findings.
 
-## Implementation
+If Gemini is unavailable or its explanation fails validation, the app
+clearly labels its rules-based fallback. Certain limitation questions
+receive a labeled rules-based response without an API call.
 
-The current assistant is rules-based. It recognizes a fixed list of
-supported questions and calls approved analytical functions.
+## Required tests
 
-It is not yet connected to a language-model API.
+| Test | Question and scope | Function used | Expected behavior | Actual result |
+| --- | --- | --- | --- | --- |
+| 1. Numerical calculation | “Compare revenue by store type”; Year = 2025, Store type = Website, Category = All | get_revenue_by_channel | Website revenue = $3,160,230.00 | Matched. The tool log showed the selected filters and 240 rows. |
+| 2. Numerical comparison | “Compare revenue by store type”; all filters = All | get_revenue_by_channel | Website = $27,218,880.00; Brick & Mortar = $14,955,560.00 | Matched. Website had higher revenue. Live Gemini and fallback responses were both observed during testing. |
+| 3. Missing information | “Does revenue tell us profit?”; all filters = All | get_revenue_by_channel | Explain that revenue alone cannot establish profit because costs and expenses are missing | Passed with a live Gemini response. It identified the missing financial information. |
+| 4. Analytical judgment | “Does higher customer satisfaction cause higher revenue?”; all filters = All | None | Explain that association does not establish causation and that the available tools do not analyze this relationship | Initial response was too vague. After revision, the labeled limitation response explained causation, alternative explanations, and the need for an appropriate study design. Retest passed. |
+| 5. Updated data | Repeat the channel-revenue question after uploading Sales_test.csv without editing code or restarting | get_revenue_by_channel | Website increases by $1,000 to $27,219,880.00; Brick & Mortar remains $14,955,560.00 | The updated amounts were observed during testing. Before/after numerical screenshots were collected. |
 
-Approved tools:
-- get_revenue_by_channel
-- get_revenue_by_year
-- get_monthly_revenue_share
+## Numerical verification
 
-Each calculated answer displays its scope, findings, interpretation,
-next steps, and a tool-call log containing the function name, explicit
-arguments, and raw result.
+The original channel totals reconcile to total revenue:
 
-## Test results
+$27,218,880.00 + $14,955,560.00 = $42,174,440.00.
 
-| Test | Question | Function | Expected behavior | Actual result | Status |
-|---|---|---|---|---|---|
-| Numerical calculation | Compare revenue by store type | get_revenue_by_channel | Original channel totals | Website $27,218,880; Brick & Mortar $14,955,560 | Pass locally and online |
-| Numerical comparison | Which store type has the most revenue? | get_revenue_by_channel | Identify the highest channel using calculated evidence | Website identified with both channel totals shown | Pass locally |
-| Missing information | Does revenue tell us profit? | get_revenue_by_channel | Explain that cost and expense data are unavailable | No profit calculated; missing costs and expenses explained | Pass locally |
-| Analytical judgment | Does revenue tell us profit? | get_revenue_by_channel | Avoid treating revenue as profitability | Recommended obtaining costs and expenses before assessing profit | Pass locally |
-| Updated data | Compare revenue by store type | get_revenue_by_channel | Changing one Website revenue value by $1,000 updates its answer | Website rose to $27,219,880; Brick & Mortar stayed $14,955,560 | Pass locally and online |
-| Unsupported request | What will sales be next year? | None | Decline unsupported forecasting without inventing numbers | Explained supported scope; no tool executed | Pass locally |
-| Yearly calculation | Show revenue by year | get_revenue_by_year | Match validated annual totals | All five annual totals matched | Pass locally |
-| Monthly calculation | Show monthly revenue shares | get_monthly_revenue_share | Match dashboard monthly values | January 7.74%; December 25.61%; denominator $42,174,440 | Pass locally |
-| Filtered calculation | Compare revenue by store type | get_revenue_by_channel | Apply 2025 and Website filters explicitly | $3,160,230; scope and log showed the filters; 240 rows used | Pass locally |
-| Filtered updated data | Compare revenue by store type | get_revenue_by_channel | Modified 2025 Website revenue rises by $1,000 | $3,161,230 | Pass locally |
-| Restore original data | Compare revenue by store type | get_revenue_by_channel | Original answer returns after restoring Sales.csv | All-years Website returned to $27,218,880; filtered 2025 Website returned to $3,160,230 | Pass |
+These amounts were compared with the Power BI report.
 
-The missing-information and analytical-judgment checks above used the
-same profit question to assess two different requirements.
+The modified Sales_test.csv increases one Website sales record by
+exactly $1,000. Therefore, the expected modified total is
+$42,175,440.00.
 
-## Original annual totals checked through the assistant
+Numerical screenshots are saved separately in the project evidence
+folder. They show answers and expanded tool-call logs.
 
-| Year | Revenue |
-|---|---:|
-| 2025 | $7,181,750.00 |
-| 2026 | $8,016,950.00 |
-| 2027 | $8,824,720.00 |
-| 2028 | $8,969,470.00 |
-| 2029 | $9,181,550.00 |
+## Additional checks
 
-## Updated-data procedure
+- Yearly revenue matched the validated Power BI amounts:
+  - 2025: $7,181,750.00
+  - 2026: $8,016,950.00
+  - 2027: $8,824,720.00
+  - 2028: $8,969,470.00
+  - 2029: $9,181,550.00
+- Monthly shares matched the validated results, including December
+  at 25.61% of selected dated revenue.
+- “Predict next year's profit” received an unsupported-request
+  response and ran no analytical tool.
+- The per-session question limit disabled further questions after
+  the limit was reached.
+- API connection failures and timeouts displayed a labeled fallback
+  instead of crashing the dashboard.
 
-Sales_test.csv changed the first data row's revenue from $6,780 to
-$7,780. The affected row was dated January 31, 2025, with Store ID SH00,
-Product ID P01, and Category ID C1.
+## Revisions and retests
 
-The same channel question was asked using modified and original data.
-No source-code change or app restart was needed.
+### Causation explanation
 
-Replacing an upload temporarily reset dashboard filters when the file
-was removed. Filters were reselected before the filtered comparison.
-The displayed answer scope was checked rather than assumed.
+Problem: The satisfaction-and-revenue question received only a
+generic unsupported-request message.
 
-Original Sales.csv was restored after testing.
+Revision: Added an explicit, labeled rules-based limitation response.
+It explains that association does not prove causation, that the
+current tools do not analyze survey-sales relationships, and that
+other factors may affect both variables.
 
-## Troubleshooting and retest
+Retest: The same question returned the intended explanation without
+running an analytical tool. Passed.
 
-During development, test code was accidentally placed in agent.py.
-This caused an ImportError because agent.py tried to import functions
-from itself.
+### Incorrect interpretation of scope
 
-The application code was restored to agent.py, and the test code was
-placed in test_agent.py. Running python3 test_agent.py then reported:
-“All dispatcher and question tests passed.”
+Problem: Gemini incorrectly stated that grouping revenue by year
+excluded other channels. It also produced misleading wording about
+whether months or years could be compared.
 
-This records a file-placement fix and successful retest. A separate
-analytical or answer-behavior improvement should also be documented
-before final submission.
+Revision: Clarified the explanation instructions, added checks for
+known misleading phrases, and made Python supply the channel-scope
+statement.
 
-An initially high Website answer was traced to Sales_test.csv still
-being loaded locally. Uploading original Sales.csv returned Website
-revenue from $27,219,880 to $27,218,880. The calculation was correct for
-each supplied file.
+Retest: The yearly response correctly described rising revenue and
+stated that no store-type filter was applied. Passed.
 
-## Automated checks
+### Profit-question fallback
 
-python3 test_analytics.py
-- Channel, annual, and monthly calculations.
-- Explicit filters.
-- Unknown values and missing columns.
-- Missing revenue and unreadable dates.
-- Zero denominator.
-- Updated data.
-- Original data preservation.
+Problem: When Gemini timed out during its explanation, the fallback
+answered a channel comparison instead of the original profit question.
 
-python3 test_agent.py
-- Approved dispatcher functions and complete logs.
-- Rejection of unsupported tools and invalid arguments.
-- Correct routing of supported questions.
-- Scope and explicit filters.
-- Unsupported questions.
-- Profit limitations.
-- Missing revenue.
-- Updated data and original data preservation.
+Revision: Preserved the response to the original supported question
+for use when Gemini fails.
 
-Both test scripts passed.
+Retest status: The live profit response passed after the revision.
+The specific timeout-during-explanation path still needs a controlled
+retest before claiming that fallback fix is fully verified.
 
-## Remaining checks and evidence
+## Limitations
 
-- PASS: On the live app, the question box became disabled at the 15-question session limit.- Save screenshots showing answers and tool-call logs for numerical tests.
-- Document an analytical or answer-behavior fix and retest.
-- If a live model is added, test API failure or quota fallback.
-- Repeat relevant assistant tests after any implementation changes.
+Gemini requests sometimes returned connection timeouts or server
+errors. A fallback result verifies the Python calculation and fallback
+behavior, but does not demonstrate a successful live Gemini response.
+
+The assistant cannot calculate profit without costs and expenses.
+Its revenue tools cannot establish causation or forecast future
+performance.
+
+The latest local changes still need deployment and verification on
+the hosted application.

@@ -104,6 +104,33 @@ def answer_question(
         "tool_log": None
     }
 
+    if normalized in {
+        "does higher customer satisfaction cause higher revenue",
+        "does customer satisfaction cause higher revenue",
+        "does higher satisfaction cause higher revenue",
+    }:
+        response["findings"] = (
+            "No causal or correlation analysis was run. The available tools "
+            "calculate revenue by store type, year, and month."
+        )
+        response["interpretation"] = (
+            "Higher customer satisfaction does not by itself prove that it "
+            "causes higher revenue. Even an observed association would not "
+            "establish causation. These revenue tools do not analyze the "
+            "relationship between survey results and sales. Differences in "
+            "store size, location, pricing, or other factors could affect both."
+        )
+        response["next_steps"] = (
+            "First match survey and revenue data at the same store and year "
+            "without duplicating revenue. To assess causation, use an "
+            "appropriate study design that addresses alternative explanations, "
+            "such as a well-designed experiment. Do not make a causal business "
+            "recommendation from the current revenue summaries."
+        )
+        response["mode"] = "Rules-based limitation response — no analytical tool run"
+        response["limitation_response"] = True
+        return response
+
     if normalized not in SUPPORTED_QUESTIONS:
         response["findings"] = "This question is not supported by this rules-based assistant."
         response["interpretation"] = (
