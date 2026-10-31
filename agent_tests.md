@@ -102,3 +102,36 @@ performance.
 
 The latest local changes still need deployment and verification on
 the hosted application.
+
+## Hosted verification — October 30, 2026
+
+The latest code was deployed and Gemini Secrets configured.
+
+- Live Gemini returned the correct original channel totals.
+- Year = 2025 and Store type = Website returned $3,160,230.00.
+- The causation question returned the explicit limitation response.
+- Uploading Sales_test.csv increased Website revenue to
+  $27,219,880.00 while Brick & Mortar remained $14,955,560.00.
+- Restoring Sales.csv returned Website revenue to $27,218,880.00.
+- Both automated test suites passed after the local revisions.
+
+These results supersede earlier notes that hosted verification was pending.
+
+Remaining checks: controlled retest of the profit fallback during an
+explanation timeout, and verification of Maci's own-account GitHub commit.
+
+Known wording limitation: one filtered Gemini answer described the
+single-channel result as though the full dataset contained one channel.
+The scope and tool log correctly identified the Website filter.
+
+## Controlled fallback retest — October 31, 2026
+
+test_gemini_fallback.py simulated a successful channel calculation
+followed by a timeout while requesting Gemini's explanation.
+
+Passed: the fallback answered the original profit question, explained
+the missing costs and expenses, retained the correct calculation and
+filters in the log, and left the original data unchanged.
+
+No real Gemini requests were made. This completes the previously
+outstanding controlled profit-fallback retest.
