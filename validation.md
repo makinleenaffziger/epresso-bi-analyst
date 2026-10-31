@@ -108,3 +108,18 @@ Retain the numerical assistant answer and tool-log screenshots with the submissi
 The latest Gemini and causation-response changes require deployment and a fresh hosted-app check. A controlled timeout retest of the profit-question fallback remains outstanding.
 Analytical limitations
 Revenue is not profit. Costs and expenses are required to assess profitability. Association between satisfaction and revenue would not prove causation. Missing survey responses limit interpretation, and the current revenue tools do not analyze the survey-sales relationship.
+
+## Status update — October 31, 2026
+
+The latest code is deployed. Hosted checks passed for live Gemini,
+dashboard filters, the causation limitation response, and the $1,000
+modified-data test. Original Sales.csv was restored.
+
+The analytics and dispatcher test suites passed. The controlled
+profit-fallback timeout test also passed without real API requests.
+
+These results supersede earlier notes marking those checks as pending.
+
+Before submission, both teammates must review the reflection and
+contribution statement. Maci's own-account GitHub contribution still
+needs completion or verification.

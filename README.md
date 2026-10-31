@@ -114,3 +114,18 @@ Limitations and completion status
 Revenue cannot establish profit. The tools do not estimate causation, analyze satisfaction relationships, or forecast performance. Missing survey responses limit interpretation. New sessions may require reuploading files. Model availability varies and generated explanations require review.
 
 Before final submission: deploy the latest changes, configure hosted Secrets, rerun automated checks, verify the hosted app, complete the controlled profit-fallback retest, and finish the reflection and contribution statement. Every teammate must have meaningful commits and be able to explain calculations and limitations.
+
+## Status update — October 31, 2026
+
+The latest code is deployed. Hosted checks passed for live Gemini,
+dashboard filters, the causation limitation response, and the $1,000
+modified-data test. Original Sales.csv was restored.
+
+The analytics and dispatcher test suites passed. The controlled
+profit-fallback timeout test also passed without real API requests.
+
+These results supersede earlier notes marking those checks as pending.
+
+Before submission, both teammates must review the reflection and
+contribution statement. Maci's own-account GitHub contribution still
+needs completion or verification.
