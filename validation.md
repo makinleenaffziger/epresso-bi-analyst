@@ -120,6 +120,4 @@ profit-fallback timeout test also passed without real API requests.
 
 These results supersede earlier notes marking those checks as pending.
 
-Before submission, both teammates must review the reflection and
-contribution statement. Maci's own-account GitHub contribution still
-needs completion or verification.
+Maci reviewed the Power BI and Streamlit comparison values for total revenue, store types, and yearly revenue. The listed values matched.
