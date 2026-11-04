@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from pathlib import Path
 
 st.title("Welcome to E-Presso!")
-st.write("Explore revenue and check the uploaded data.")
+st.write("Explore revenue and check the loaded data.")
+st.info("Original E-Presso data loads automatically. Upload a replacement below to test updated data. Removing an upload restores that table’s original data.")
 
 st.subheader("What each row represents")
 grain = pd.DataFrame([
@@ -31,15 +33,32 @@ def require_columns(data, required, name):
         st.stop()
 
 
-st.subheader("Upload store data")
+DATA_DIR = Path(__file__).resolve().parent / "data"
+
+
+def choose_source(uploaded, filename, name):
+    if uploaded is not None:
+        st.caption(f"Using uploaded {name}: {uploaded.name}")
+        return uploaded
+    original = DATA_DIR / filename
+    if not original.is_file():
+        st.error(f"Original {name} file is missing: data/{filename}. Upload a replacement or restore the original file.")
+        st.stop()
+    st.caption(f"Using original {name} data.")
+    return original
+
+
+st.subheader("Store data")
 stores_file = st.file_uploader("Choose your Stores CSV file", type=["csv"])
+stores_file = choose_source(stores_file, "Stores.csv", "Stores")
 if stores_file is not None:
     stores = pd.read_csv(stores_file, skiprows=1, dtype=str)
     require_columns(stores, ["ID", "StoreType"], "Stores")
     show_profile(stores, "store", "ID")
 
-st.subheader("Upload survey data")
+st.subheader("Survey data")
 survey_file = st.file_uploader("Choose your Survey Excel file", type=["xlsx"])
+survey_file = choose_source(survey_file, "Survey.xlsx", "Survey Results")
 if survey_file is not None:
     survey = pd.read_excel(
         survey_file, sheet_name="Survey Results", skiprows=2
@@ -47,8 +66,9 @@ if survey_file is not None:
     require_columns(survey, ["Survey ID"], "Survey Results")
     show_profile(survey, "survey", "Survey ID")
 
-st.subheader("Upload sales data")
+st.subheader("Sales data")
 sales_file = st.file_uploader("Choose your Sales CSV file", type=["csv"])
+sales_file = choose_source(sales_file, "Sales.csv", "Sales")
 if sales_file is not None:
     sales = pd.read_csv(sales_file)
     require_columns(
@@ -66,19 +86,21 @@ if sales_file is not None:
         )
         st.stop()
     st.metric(
-        "Total revenue — all uploaded sales",
+        "Total revenue — all loaded sales",
         f"${sales['Revenue'].sum():,.2f}"
     )
 
-st.subheader("Upload product data")
+st.subheader("Product data")
 products_file = st.file_uploader("Choose your Products CSV file", type=["csv"])
+products_file = choose_source(products_file, "Products.csv", "Products")
 if products_file is not None:
     products = pd.read_csv(products_file, dtype=str)
     require_columns(products, ["Product ID", "Product"], "Products")
     show_profile(products, "product", "Product ID")
 
-st.subheader("Upload category data")
+st.subheader("Category data")
 categories_file = st.file_uploader("Choose your Categories CSV file", type=["csv"])
+categories_file = choose_source(categories_file, "Categories.csv", "Categories")
 if categories_file is not None:
     categories = pd.read_csv(categories_file, dtype=str)
     require_columns(categories, ["Category ID", "Category"], "Categories")
